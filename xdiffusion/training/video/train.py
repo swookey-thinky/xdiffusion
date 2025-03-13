@@ -208,12 +208,18 @@ def train(
     #  for the 256 × 256 images, which seemed unstable to train with the larger learning rate."
     optimizers = source_diffusion_model.configure_optimizers(learning_rate=2e-4)
 
-    # Load the optimizers if we have them from the checkpoint
+    # step counter to keep track of training
+    step = 0
+    
+    # Load the optimizers and step counter if we have them from the checkpoint
     if resume_from:
         checkpoint = torch.load(resume_from, map_location="cpu")
         num_optimizers = checkpoint["num_optimizers"]
         for i in range(num_optimizers):
             optimizers[i].load_state_dict(checkpoint["optimizer_state_dicts"][i])
+
+        if "step" in checkpoint:
+            step = checkpoint["step"]
 
     # Configure the learning rate schedule
     learning_rate_schedules = source_diffusion_model.configure_learning_rate_schedule(
@@ -256,9 +262,6 @@ def train(
             )
         else:
             mask_generators.append(masking.IdentityMaskGenerator())
-
-    # Step counter to keep track of training
-    step = 0
 
     # Not mentioned in the DDPM paper, but the original implementation
     # used gradient clipping during training.

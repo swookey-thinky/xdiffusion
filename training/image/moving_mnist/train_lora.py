@@ -141,12 +141,18 @@ def train(
     #  for the 256 × 256 images, which seemed unstable to train with the larger learning rate."
     optimizers = diffusion_model.configure_optimizers(learning_rate=2e-4)
 
-    # Load the optimizers if we have them from the checkpoint
+    # Step counter to keep track of training
+    step = 0
+
+    # Load the optimizers and step counter if we have them from the checkpoint
     if resume_from_checkpoint:
         checkpoint = torch.load(resume_from_checkpoint, map_location="cpu")
         num_optimizers = checkpoint["num_optimizers"]
         for i in range(num_optimizers):
             optimizers[i].load_state_dict(checkpoint["optimizer_state_dicts"][i])
+        
+        if "step" in checkpoint:
+            step = checkpoint["step"]            
 
     # Move the model and the optimizer to the accelerator as well.
     diffusion_model = accelerator.prepare(diffusion_model)
@@ -181,8 +187,6 @@ def train(
     else:
         # Default scale function returns the target ema rate
         ema_scale_fn = lambda step: 0.9999, 0
-    # Step counter to keep track of training
-    step = 0
 
     # Not mentioned in the DDPM paper, but the original implementation
     # used gradient clipping during training.

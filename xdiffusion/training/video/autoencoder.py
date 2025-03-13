@@ -185,12 +185,18 @@ def train(
     #  for the 256 × 256 images, which seemed unstable to train with the larger learning rate."
     optimizers = vae.configure_optimizers(learning_rate=4.5e-6)
 
-    # Load the optimizers if we have them from the checkpoint
+   # Step counter to keep track of training
+    step = 0
+
+    # Load the optimizers and step counter if we have them from the checkpoint
     if resume_from:
         checkpoint = torch.load(resume_from, map_location="cpu")
         num_optimizers = checkpoint["num_optimizers"]
         for i in range(num_optimizers):
             optimizers[i].load_state_dict(checkpoint["optimizer_state_dicts"][i])
+
+        if "step" in checkpoint:
+            step = checkpoint["step"]
 
     # Move everything to the accelerator together
     all_device_objects = accelerator.prepare(
@@ -205,9 +211,6 @@ def train(
     # We are going to train for a fixed number of steps, so set the dataloader
     # to repeat indefinitely over the entire dataset.
     dataloader = cycle(dataloader)
-
-    # Step counter to keep track of training
-    step = 0
 
     # Not mentioned in the DDPM paper, but the original implementation
     # used gradient clipping during training.
